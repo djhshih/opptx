@@ -1,0 +1,41 @@
+#!/bin/bash
+# Compress a pptx file by converting embedded tiff to jpeg
+
+set -euo pipefail
+IFS=$'\n\t'
+
+
+if (( $# < 1 )); then
+	echo "usage: ${0##*/} <input>"
+	exit 1
+fi
+
+root=$( cd ${0%/*} && pwd -P )
+
+infile=$1
+infname=${infile##*/}
+infstem=${infname%.*}
+outdir=$(cd ${infile%/*}; pwd)
+outfile=$outdir/${infstem}_rd.pptx
+
+tmp=$(mktemp -d)
+echo "Working in $tmp"
+
+extract_pptx() {
+	unzip -d $tmp $1
+}
+
+make_pptx() {
+	rm -rf $1
+	(cd $tmp && zip -9 -r $1 ./)
+}
+
+extract_pptx $infile
+$root/to-jpeg.py $tmp
+make_pptx $outfile
+
+echo "Output file: $outfile"
+
+# clean up
+trap "rm -rf $tmp" EXIT
+
